@@ -1916,10 +1916,10 @@ unsafe fn status_prompt_complete_list(size: *mut u32, s: *const u8, at_start: i3
             if cmdent.name == s {
                 status_prompt_add_list(&raw mut list, size, cmdent.name);
             }
-            if let Some(alias) = cmdent.alias
-                && alias == s
-            {
-                status_prompt_add_list(&raw mut list, size, alias);
+            if let Some(alias) = cmdent.alias {
+                if alias == s {
+                    status_prompt_add_list(&raw mut list, size, alias);
+                }
             }
         }
         let o = options_get_only(GLOBAL_OPTIONS, c!("command-alias"));

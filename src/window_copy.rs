@@ -1952,7 +1952,7 @@ pub unsafe fn window_copy_cmd_other_end(cs: *mut window_copy_cmd_state) -> windo
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         (*data).selflag = selflag::SEL_CHAR;
-        if !np.is_multiple_of(2) {
+        if !np.is_multiple_of_(2) {
             window_copy_other_end(wme);
         }
         window_copy_cmd_action::WINDOW_COPY_CMD_NOTHING
@@ -4277,22 +4277,23 @@ pub unsafe fn window_copy_move_after_search_mark(
     unsafe {
         let s = (*data).backing;
 
-        if let Ok(start) = window_copy_search_mark_at(data, *fx, *fy)
-            && *(*data).searchmark.add(start as usize) != 0
-        {
-            while let Ok(at) = window_copy_search_mark_at(data, *fx, *fy) {
-                if (*data).searchmark.add(at as usize) != (*data).searchmark.add(start as usize) {
-                    break;
-                }
-                // Stop if not wrapping and at the end of the grid.
-                if wrapflag == 0
-                    && *fx == screen_size_x(s) - 1
-                    && *fy == screen_hsize(s) + screen_size_y(s) - 1
-                {
-                    break;
-                }
+        if let Ok(start) = window_copy_search_mark_at(data, *fx, *fy) {
+            if *(*data).searchmark.add(start as usize) != 0 {
+                while let Ok(at) = window_copy_search_mark_at(data, *fx, *fy) {
+                    if (*data).searchmark.add(at as usize) != (*data).searchmark.add(start as usize)
+                    {
+                        break;
+                    }
+                    // Stop if not wrapping and at the end of the grid.
+                    if wrapflag == 0
+                        && *fx == screen_size_x(s) - 1
+                        && *fy == screen_hsize(s) + screen_size_y(s) - 1
+                    {
+                        break;
+                    }
 
-                window_copy_move_right(s, fx, fy, wrapflag);
+                    window_copy_move_right(s, fx, fy, wrapflag);
+                }
             }
         }
     }
@@ -4396,18 +4397,26 @@ pub unsafe fn window_copy_search(
 
             // When searching forward, if the cursor is not at the beginning
             // of the mark, search again.
-            if direction != 0
-                && let Ok(at) = window_copy_search_mark_at(data, fx, fy)
-                && at > 0
-                && !(*data).searchmark.is_null()
-                && *(*data).searchmark.add(at as usize) == *(*data).searchmark.add(at as usize - 1)
-            {
-                window_copy_move_after_search_mark(data, &raw mut fx, &raw mut fy, wrapflag);
-                window_copy_search_jump(
-                    wme, gd, ss.grid, fx, fy, endline, cis, wrapflag, direction, regex,
-                );
-                fx = (*data).cx;
-                fy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
+            if direction != 0 {
+                if let Ok(at) = window_copy_search_mark_at(data, fx, fy) {
+                    if at > 0
+                        && !(*data).searchmark.is_null()
+                        && *(*data).searchmark.add(at as usize)
+                            == *(*data).searchmark.add(at as usize - 1)
+                    {
+                        window_copy_move_after_search_mark(
+                            data,
+                            &raw mut fx,
+                            &raw mut fy,
+                            wrapflag,
+                        );
+                        window_copy_search_jump(
+                            wme, gd, ss.grid, fx, fy, endline, cis, wrapflag, direction, regex,
+                        );
+                        fx = (*data).cx;
+                        fy = screen_hsize((*data).backing) - (*data).oy + (*data).cy;
+                    }
+                }
             }
 
             if direction != 0 {
@@ -4421,11 +4430,14 @@ pub unsafe fn window_copy_search(
                 // When searching backward, position the cursor at the
                 // beginning of the mark.
                 if let Ok(start) = window_copy_search_mark_at(data, fx, fy) {
-                    while let Ok(at) = window_copy_search_mark_at(data, fx, fy)
-                        && !(*data).searchmark.is_null()
-                        && *(*data).searchmark.add(at as usize)
-                            == *(*data).searchmark.add(start as usize)
-                    {
+                    while let Ok(at) = window_copy_search_mark_at(data, fx, fy) {
+                        if (*data).searchmark.is_null()
+                            || *(*data).searchmark.add(at as usize)
+                                != *(*data).searchmark.add(start as usize)
+                        {
+                            break;
+                        }
+
                         (*data).cx = fx;
                         (*data).cy = fy - screen_hsize((*data).backing) + (*data).oy;
                         if at == 0 {

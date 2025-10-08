@@ -299,10 +299,10 @@ pub unsafe fn job_transfer(job: *mut job, pid: *mut pid_t, tty: *mut u8, ttylen:
         list_remove(job);
         free_((*job).cmd);
 
-        if let Some(freecb) = (*job).freecb
-            && !(*job).data.is_null()
-        {
-            freecb((*job).data);
+        if let Some(freecb) = (*job).freecb {
+            if !(*job).data.is_null() {
+                freecb((*job).data);
+            }
         }
 
         if !(*job).event.is_null() {
@@ -321,10 +321,10 @@ pub unsafe fn job_free(job: *mut job) {
         list_remove(job);
         free_((*job).cmd);
 
-        if let Some(freecb) = (*job).freecb
-            && !((*job).data).is_null()
-        {
-            freecb((*job).data);
+        if let Some(freecb) = (*job).freecb {
+            if !((*job).data).is_null() {
+                freecb((*job).data);
+            }
         }
         if (*job).pid != -1 {
             kill((*job).pid, SIGTERM);
