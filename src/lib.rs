@@ -18,6 +18,9 @@
     reason = "this lint is here instead of in Cargo.toml because of a bug in rust analyzer"
 )]
 
+mod shim;
+use shim::*;
+
 mod libc;
 pub(crate) use crate::libc::errno;
 pub(crate) use crate::libc::*;
@@ -1936,7 +1939,7 @@ enum cmd_find_type {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 struct cmd_find_state {
     flags: cmd_find_flags,
     current: *mut cmd_find_state,
@@ -2033,7 +2036,6 @@ impl std::ops::BitAndAssign<cmd_parse_input_flags> for &AtomicCmdParseInputFlags
 }
 
 #[repr(C)]
-#[derive(Default)]
 struct cmd_parse_input<'a> {
     flags: AtomicCmdParseInputFlags,
 
@@ -2626,7 +2628,7 @@ unsafe fn args_get_(args: *mut args, flag: char) -> *const u8 {
 
 unsafe impl Sync for SyncCharPtr {}
 #[repr(transparent)]
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 struct SyncCharPtr(*const u8);
 impl SyncCharPtr {
     const fn new(value: &'static CStr) -> Self {
