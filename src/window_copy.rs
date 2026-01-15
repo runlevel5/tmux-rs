@@ -3941,12 +3941,18 @@ pub unsafe fn window_copy_cstrtocellpos(
     str: *const u8,
 ) {
     unsafe {
-        let mut match_: i32;
-
         struct Cell {
             d: *const u8,
             dlen: usize,
             allocated: i32,
+        }
+
+        impl Drop for Cell {
+            fn drop(&mut self) {
+                if self.allocated != 0 {
+                    unsafe { free_(self.d as *mut c_void) };
+                }
+            }
         }
 
         // Populate the array of cell data.
@@ -3970,21 +3976,20 @@ pub unsafe fn window_copy_cstrtocellpos(
         // Locate starting cell.
         let mut cell = 0u32;
         let len = strlen(str) as u32;
-        while cell < ncells {
+        'outer: while cell < ncells {
             let mut ccell = cell;
             let mut pos = 0;
-            match_ = 1;
             while ccell < ncells {
                 if *str.add(pos) == b'\0' {
-                    match_ = 0;
-                    break;
+                    cell += 1;
+                    continue 'outer;
                 }
                 let d = cells[ccell as usize].d;
                 let mut dlen = cells[ccell as usize].dlen;
                 if dlen == 1 {
                     if *str.add(pos) != *d {
-                        match_ = 0;
-                        break;
+                        cell += 1;
+                        continue 'outer;
                     }
                     pos += 1;
                 } else {
@@ -3992,17 +3997,14 @@ pub unsafe fn window_copy_cstrtocellpos(
                         dlen = len as usize - pos;
                     }
                     if memcmp(str.add(pos).cast(), d.cast(), dlen) != 0 {
-                        match_ = 0;
-                        break;
+                        cell += 1;
+                        continue 'outer;
                     }
                     pos += dlen;
                 }
                 ccell += 1;
             }
-            if match_ != 0 {
-                break;
-            }
-            cell += 1;
+            break;
         }
 
         // If not found this will be one past the end.
@@ -4015,14 +4017,7 @@ pub unsafe fn window_copy_cstrtocellpos(
 
         *ppx = px;
         *ppy = pywrap;
-
-        // Free cell data.
-        for cell in &cells {
-            if cell.allocated != 0 {
-                free_(cell.d as *mut c_void);
-            } // TODO cast away const
-        }
-        // Vec automatically deallocates when dropped
+        // Cell's Drop impl and Vec's automatic drop handle all cleanup
     }
 }
 
