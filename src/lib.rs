@@ -26,9 +26,7 @@
 )]
 
 mod libc;
-pub(crate) use crate::libc::errno;
 pub(crate) use crate::libc::*;
-pub(crate) use crate::libc::{free_, memcpy_, memcpy__, streq_};
 
 // libevent2
 mod event_;
